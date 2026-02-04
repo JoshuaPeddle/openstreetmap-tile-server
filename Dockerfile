@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 AS compiler-common
+FROM ubuntu:24.04 AS compiler-common
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
@@ -80,12 +80,18 @@ RUN apt-get update \
  python3-psycopg2 \
  python3-shapely \
  python3-pip \
+ python3-requests \
+ python3-venv \
+ python3-yaml \
  renderd \
  sudo \
  vim \
 && apt-get clean autoclean \
 && apt-get autoremove --yes \
 && rm -rf /var/lib/{apt,dpkg,cache,log}/
+
+RUN python3 -m venv /opt/venv \
+&& /opt/venv/bin/pip install --no-cache-dir osmium==4.3.0
 
 RUN adduser --disabled-password --gecos "" renderer
 
@@ -94,12 +100,6 @@ RUN wget https://github.com/googlefonts/noto-emoji/blob/9a5261d871451f9b5183c934
 
 # For some reason this one is missing in the default packages
 RUN wget https://github.com/stamen/terrain-classic/blob/master/fonts/unifont-Medium.ttf?raw=true --content-disposition -P /usr/share/fonts/
-
-# Install python libraries
-RUN pip3 install \
- requests \
- osmium \
- pyyaml
 
 # Install carto for stylesheet
 RUN npm install -g carto@1.2.0

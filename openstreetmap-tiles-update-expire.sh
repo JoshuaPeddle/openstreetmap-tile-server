@@ -15,6 +15,7 @@ set -e
 OSMOSIS_BIN=osmosis
 OSM2PGSQL_BIN=osm2pgsql
 TRIM_BIN=/home/renderer/src/regional/trim_osc.py
+PYOSMIUM_GET_CHANGES=/opt/venv/bin/pyosmium-get-changes
 
 DBNAME=gis
 OSM2PGSQL_OPTIONS="-d $DBNAME -G --hstore --tag-transform-script /data/style/${NAME_LUA:-openstreetmap-carto.lua} --number-processes ${THREADS:-4} -S /data/style/${NAME_STYLE:-openstreetmap-carto.style} ${OSM2PGSQL_EXTRA_ARGS}"
@@ -111,7 +112,7 @@ if [ $# -eq 1 ] ; then
     mkdir -p $WORKOSM_DIR
     $OSMOSIS_BIN -v 5 --read-replication-interval-init workingDirectory=$WORKOSM_DIR 1>&2 2> "$OSMOSISLOG"
 
-    init_seq=$(/usr/lib/python3-pyosmium/pyosmium-get-changes --server $REPLICATION_URL -D $1)
+    init_seq=$($PYOSMIUM_GET_CHANGES --server $REPLICATION_URL -D $1)
     url_dynamicPart=$(printf %09d $init_seq | sed 's_\([0-9][0-9][0-9]\)\([0-9][0-9][0-9]\)\([0-9][0-9][0-9]\)_\1/\2/\3_')
     wget $REPLICATION_URL/$url_dynamicPart.state.txt -O $WORKOSM_DIR/state.txt
 
