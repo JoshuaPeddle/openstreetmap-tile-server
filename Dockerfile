@@ -81,7 +81,7 @@ RUN apt-get update \
  python3-shapely \
  python3-pip \
  python3-requests \
- python3-osmium \
+ python3-venv \
  python3-yaml \
  renderd \
  sudo \
@@ -89,6 +89,9 @@ RUN apt-get update \
 && apt-get clean autoclean \
 && apt-get autoremove --yes \
 && rm -rf /var/lib/{apt,dpkg,cache,log}/
+
+RUN python3 -m venv /opt/venv \
+&& /opt/venv/bin/pip install --no-cache-dir pyosmium
 
 RUN adduser --disabled-password --gecos "" renderer
 
