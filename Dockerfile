@@ -116,9 +116,10 @@ RUN ln -sf /dev/stdout /var/log/apache2/access.log \
 # leaflet
 COPY leaflet-demo.html /var/www/html/index.html
 RUN cd /var/www/html/ \
-&& wget https://github.com/Leaflet/Leaflet/releases/download/v1.8.0/leaflet.zip \
+&& wget https://github.com/Leaflet/Leaflet/releases/download/v1.9.4/leaflet.zip \
 && unzip leaflet.zip \
-&& rm leaflet.zip
+&& rm leaflet.zip \
+&& mv /var/www/html/dist/* /var/www/html/ 
 
 # Icon
 RUN wget -O /var/www/html/favicon.ico https://www.openstreetmap.org/favicon.ico
