@@ -12,6 +12,36 @@ function setPostgresPassword() {
     sudo -u postgres psql -c "ALTER USER renderer PASSWORD '${PGPASSWORD:-renderer}'"
 }
 
+function waitForPostgres() {
+    # Wait up to ~30s for postgres to accept connections
+    for i in {1..30}; do
+        if sudo -u postgres pg_isready -q -d gis; then
+            return 0
+        fi
+        sleep 1
+    done
+    echo "ERROR: postgres not ready after waiting" >&2
+    return 1
+}
+
+function ensureCartoFunctions() {
+    # Only attempt if the style provides it (OSM-Carto does)
+    if [ ! -f /data/style/functions.sql ]; then
+        echo "INFO: /data/style/functions.sql not found; skipping carto functions load"
+        return 0
+    fi
+
+    waitForPostgres
+
+    if ! sudo -u postgres psql -d gis -tAc "SELECT 1 FROM pg_proc WHERE proname='carto_path_type' LIMIT 1" | grep -q 1; then
+        echo "INFO: carto functions missing; loading /data/style/functions.sql"
+        sudo -u postgres psql -d gis -v ON_ERROR_STOP=1 -f /data/style/functions.sql
+    else
+        echo "INFO: carto functions already present; skipping"
+    fi
+}
+
+
 if [ "$#" -ne 1 ]; then
     echo "usage: <import|run>"
     echo "commands:"
@@ -58,6 +88,7 @@ if [ "$1" == "import" ]; then
     sudo -u postgres psql -d gis -c "CREATE EXTENSION hstore;"
     sudo -u postgres psql -d gis -c "ALTER TABLE geometry_columns OWNER TO renderer;"
     sudo -u postgres psql -d gis -c "ALTER TABLE spatial_ref_sys OWNER TO renderer;"
+    ensureCartoFunctions
     setPostgresPassword
 
     # Download Luxembourg as sample if no data is provided
@@ -164,6 +195,7 @@ if [ "$1" == "run" ]; then
     # Initialize PostgreSQL and Apache
     createPostgresConfig
     service postgresql start
+    ensureCartoFunctions
     service apache2 restart
     setPostgresPassword
 
