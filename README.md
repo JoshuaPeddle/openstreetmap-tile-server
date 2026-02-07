@@ -259,6 +259,13 @@ docker run \
 
 Warning: enabling `FLAT_NOTES` together with `UPDATES` only works for entire planet imports (without a `.poly` file).  Otherwise this will break the automatic update script. This is because trimming the differential updates to the specific regions currently isn't supported when using flat nodes.
 
+### Preloading
+
+```bash
+docker exec -it <container> bash
+render_list -m default -a -z 0 -Z 8   # Low zooms (fast, always needed)
+```
+
 ### Benchmarks
 
 You can find an example of the import performance to expect with this image on the [OpenStreetMap wiki](https://wiki.openstreetmap.org/wiki/Osm2pgsql/benchmarks#debian_9_.2F_openstreetmap-tile-server).
