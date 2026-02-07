@@ -38,6 +38,32 @@ RUN mkdir -p /home/renderer/src \
 
 ###########################################################################################################
 
+FROM compiler-common AS compiler-osm2pgsql
+ARG OSM2PGSQL_VERSION=2.2.0
+
+# Build osm2pgsql from source with LuaJIT support (faster Lua tag transforms)
+# Uses DESTDIR so we can copy only the installed artifacts into the final stage.
+RUN apt-get update \
+&& apt-get install -y --no-install-recommends \
+  make cmake g++ pkg-config \
+  libboost-dev libexpat1-dev zlib1g-dev libbz2-dev \
+  libpq-dev libproj-dev nlohmann-json3-dev \
+  libluajit-5.1-dev \
+  binutils \
+&& rm -rf /var/lib/apt/lists/*
+
+RUN cd /tmp \
+&& git clone --single-branch --branch ${OSM2PGSQL_VERSION} https://github.com/osm2pgsql-dev/osm2pgsql.git --depth 1 \
+&& cmake -S /tmp/osm2pgsql -B /tmp/osm2pgsql-build \
+     -DCMAKE_BUILD_TYPE=Release \
+     -DBUILD_TESTS=OFF \
+     -DWITH_LUAJIT=ON \
+     -DCMAKE_INSTALL_PREFIX=/usr/local \
+&& cmake --build /tmp/osm2pgsql-build -j"$(nproc)" \
+&& DESTDIR=/tmp/osm2pgsql-install cmake --install /tmp/osm2pgsql-build \
+&& strip /tmp/osm2pgsql-install/usr/local/bin/osm2pgsql /tmp/osm2pgsql-install/usr/local/bin/osm2pgsql-replication || true \
+&& rm -rf /tmp/osm2pgsql /tmp/osm2pgsql-build
+
 FROM compiler-common AS final
 
 # Based on
@@ -64,11 +90,9 @@ RUN apt-get update \
  fonts-unifont \
  gnupg2 \
  gdal-bin \
- liblua5.3-dev \
- lua5.3 \
+ libluajit-5.1-2 \
  mapnik-utils \
  npm \
- osm2pgsql \
  osmium-tool \
  osmosis \
  postgresql-$PG_VERSION \
@@ -104,6 +128,11 @@ RUN wget https://github.com/stamen/terrain-classic/blob/master/fonts/unifont-Med
 
 # Install carto for stylesheet
 RUN npm install -g carto@1.2.0
+
+# Use the self-built osm2pgsql (v${OSM2PGSQL_VERSION}) instead of Ubuntu's older packaged version
+ARG OSM2PGSQL_VERSION=2.2.0
+COPY --from=compiler-osm2pgsql /tmp/osm2pgsql-install/usr/local/bin/osm2pgsql /usr/local/bin/osm2pgsql
+COPY --from=compiler-osm2pgsql /tmp/osm2pgsql-install/usr/local/bin/osm2pgsql-replication /usr/local/bin/osm2pgsql-replication
 
 # Configure Apache
 RUN echo "LoadModule tile_module /usr/lib/apache2/modules/mod_tile.so" >> /etc/apache2/conf-available/mod_tile.conf \
